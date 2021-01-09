@@ -8,24 +8,32 @@ def shared_setup(fn_isolation):
 
 @pytest.fixture()
 def minter(accounts):
-    return accounts[0]
-    # return accounts.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", force=True)
+    # return accounts[0]
+    return accounts.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", force=True)
 
 @pytest.fixture()
 def me(accounts):
     return accounts.at("0xf521Bb7437bEc77b0B15286dC3f49A87b9946773", force=True)
 
 @pytest.fixture()
+def me2(accounts):
+    return accounts.at("0xf521Bb7437bEc77b0B15286dC3f49A87b9946774", force=True)
+
+@pytest.fixture()
+def me3(accounts):
+    return accounts.at("0xf521Bb7437bEc77b0B15286dC3f49A87b9946775", force=True)
+
+@pytest.fixture()
 def big(accounts):
-    return accounts.at("0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e", force=True)
+    return accounts.at("0x742d35cc6634c0532925a3b844bc454e4438f44e", force=True)
 
 @pytest.fixture()
 def nftbox(NFTBoxes, minter, accounts):
-    return NFTBoxes.deploy({'from':accounts[0]})
+    return NFTBoxes.deploy({'from':minter})
 
 @pytest.fixture()
 def joy(JOYtoys, minter, accounts):
-    return JOYtoys.deploy({'from':accounts[0]})
+    return JOYtoys.deploy({'from':minter})
 
 @pytest.fixture()
 def testnft(TestNFT, minter):

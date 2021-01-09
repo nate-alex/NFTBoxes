@@ -39,6 +39,9 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 	mapping(address => uint256) public teamShare;
 	address payable[] public team;
 
+	event BoxMouldCreated(uint256 id);
+	event BoxBought(uint256 id);
+
 	function addTeamMember(address payable _member) external onlyOwner {
 		for (uint256 i = 0; i < team.length; i++)
 			require( _member != team[i], "NFTBoxes: members exists already");
@@ -60,7 +63,7 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		uint256[] memory _shares,
 		string memory _name)
 		external onlyOwner{
-		require(_artists.length == _shares.length, "NFTBoxes");
+		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length.");
 		BoxMould memory boxMould = BoxMould({
 			live: uint8(0),
 			shared: uint8(0),
@@ -80,8 +83,16 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		// ask nate about metadata stuff
 	}
 
+	// dont even need this tbh?
+	function getArtistRoyalties(uint256 _id) external view returns (address payable[] memory artists, uint256[] memory royalties) {
+		require(boxMouldCount > _id, "NFTBoxes: ID does not exist.");
+		BoxMould memory boxMould = boxMoulds[_id];
+		artists = boxMould.artists;
+		royalties = boxMould.shares;
+	}
+
 	function buyBox(uint256 _id) external payable {
-		BoxMould storage boxMould= boxMoulds[_id];
+		BoxMould storage boxMould = boxMoulds[_id];
 		require(boxMould.live == 0, "NFTBoxes: Box is no longer buyable.");
 		require(msg.value == boxMould.price, "NFTBoxes: Wrong price.");
 

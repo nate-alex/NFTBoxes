@@ -48,23 +48,6 @@ def test_wrong_price(nftbox, minter, accounts):
     with brownie.reverts("NFTBoxes: Wrong price."):
         nftbox.buyBox(0, {'from':accounts[0], "value": Wei("1 ether")})
 
-# def test_distribution(nftbox, minter, me, testnft, accounts):
-#     nftbox.createBoxMould(100, Wei('0.01 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
-#     for j in range(10):
-#         for k in range(10):
-#             print(f'{j}.{k} buy')
-#             nftbox.buyBox(0, {'from':accounts[j], "value": Wei("0.01 ether")})
-#     nftbox.setNFT(testnft, {'from':minter})
-#     for i in range(4):
-#         print(f'distribute {i}')
-#         nftbox.distribute2(0, 25,{'from':minter})
-#     for l in range(10):
-#         assert testnft.balanceOf(accounts[l]) == 40
-#     for i in range(10):
-#         print(f'Owner of #{i} - {testnft.ownerOf(i)}')
-#     with brownie.reverts("NFTBoxes: minting too many NFTs."):
-#         nftbox.distribute(0, 1,{'from':minter})
-
 def test_distribution_with_machine_one(nftbox, joy, me, minter, accounts):
     joy.setCaller(nftbox, True, {'from':minter})
     nftbox.setVendingMachine(joy, {'from': minter})
@@ -106,6 +89,39 @@ def test_distribution_with_machine2(nftbox, joy, minter, accounts):
         nftbox.distribute(0, 2,{'from':minter})
     for i in range(10):
         assert joy.balanceOf(accounts[i]) == 40
+
+def test_shares(nftbox, joy, minter, accounts, me, me2, me3, big):
+    joy.setCaller(nftbox, True, {'from':minter})
+    nftbox.setVendingMachine(joy, {'from': minter})
+    nftbox.createBoxMould(1, Wei('100 ether'), [1], [accounts[1], accounts[2], accounts[3]], [240, 260, 250], "This is a test box", {'from':minter})
+    joy.createJOYtoy("c0ffee", "someType", "over 9000", "toy", "fun", 100, True, 0, 0, {'from':minter})
+
+    nftbox.addTeamMember(me, {'from':minter})
+    nftbox.setTeamShare(me, 100, {'from':minter})
+
+    nftbox.addTeamMember(me2, {'from':minter})
+    nftbox.setTeamShare(me2, 76, {'from':minter})
+
+    nftbox.addTeamMember(me3, {'from':minter})
+    nftbox.setTeamShare(me3, 74, {'from':minter})
+
+    nftbox.buyBox(0, {'from':big, 'value':  Wei('100 ether')})
+
+    preme = me.balance()
+    preme2 = me2.balance()
+    preme3 = me3.balance()
+    preacc1 = accounts[1].balance()
+    preacc2 = accounts[2].balance()
+    preacc3 = accounts[3].balance()
+    nftbox.distributeShares(0,{'from':minter})
+    assert me.balance() == preme + Wei('100 ether') * 100 / 1000
+    assert me2.balance() == preme2 + Wei('100 ether') * 76 / 1000
+    assert me3.balance() == preme3 + Wei('100 ether') * 74 / 1000
+    assert accounts[1].balance() == preacc1 + Wei('100 ether') * 240 / 1000
+    assert accounts[2].balance() == preacc2 + Wei('100 ether') * 260 / 1000
+    assert accounts[3].balance() == preacc3 + Wei('100 ether') * 250 / 1000
+
+
 
 # def f():
 # minter = accounts.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", force=True)
