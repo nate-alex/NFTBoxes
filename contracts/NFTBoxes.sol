@@ -62,7 +62,8 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		address payable[] memory _artists,
 		uint256[] memory _shares,
 		string memory _name)
-		external onlyOwner{
+		external
+		onlyOwner {
 		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length.");
 		BoxMould memory boxMould = BoxMould({
 			live: uint8(0),
@@ -91,27 +92,44 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		royalties = boxMould.shares;
 	}
 
+	function buyManyBoxes(uint256 _id, uint128 _quantity) external payable {
+		BoxMould storage boxMould = boxMoulds[_id];
+		require(_id < boxMouldCount, "NFTBoxes: Box does not exist.");
+		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: wrong total price.");
+		require(boxMould.currentEditionCount + _quantity <= boxMould.maxEdition, "NFTBoxes: Minting too many boxes.");
+
+		for (uint128 i = 0; i < _quantity; i++)
+			_buy(boxMould, _id);
+		boxMould.currentEditionCount += _quantity;
+		if (boxMould.currentEditionCount == boxMould.maxEdition)
+			boxMould.live = uint8(1);
+	}
+
 	function buyBox(uint256 _id) external payable {
 		BoxMould storage boxMould = boxMoulds[_id];
+		require(_id < boxMouldCount, "NFTBoxes: Box does not exist.");
 		require(boxMould.live == 0, "NFTBoxes: Box is no longer buyable.");
 		require(msg.value == boxMould.price, "NFTBoxes: Wrong price.");
 
-		boxes[totalSupply()] = Box(_id, boxMould.currentEditionCount);
-		for (uint256 i = 0; i < boxMould.ids.length; i++)
-			dissArr[_id][i].push(msg.sender);
+		_buy(boxMould, _id);
 		boxMould.currentEditionCount++;
 		if (boxMould.currentEditionCount == boxMould.maxEdition)
 			boxMould.live = uint8(1);
+	}
 
+	function _buy(BoxMould storage boxMould, uint256 _id) internal {
+		boxes[totalSupply()] = Box(_id, boxMould.currentEditionCount);
+		for (uint256 i = 0; i < boxMould.ids.length; i++)
+			dissArr[_id][i].push(msg.sender);
 		//safe mint?
 		_mint(msg.sender, totalSupply());
 	}
 
-	function setVendingMachine(address _machine) external  onlyOwner{
+	function setVendingMachine(address _machine) external onlyOwner {
 		vendingMachine = IVendingMachine(_machine);
 	}
 
-	function distribute(uint256 _id, uint128 _amount) external  onlyOwner{
+	function distribute(uint256 _id, uint128 _amount) external  onlyOwner {
 		BoxMould storage boxMould= boxMoulds[_id];
 		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
 		require (boxMould.checkpoint + _amount <= boxMould.currentEditionCount, "NFTBoxes: minting too many NFTs.");
@@ -139,14 +157,14 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		require(is100(_id), "NFTBoxes: shares do not add up to 100%.");
 
 		boxMould.shared = 1;
-		uint256 rev = uint256(boxMould.currentEditionCount) * boxMould.price;
+		uint256 rev = uint256(boxMould.currentEditionCount).mul(boxMould.price);
 		uint256 share;
 		for (uint256 i = 0; i < team.length; i++) {
-			share = rev * teamShare[team[i]] / TOTAL_SHARES;
+			share = rev.mul(teamShare[team[i]]).div(TOTAL_SHARES);
 			team[i].transfer(share);
 		}
 		for (uint256 i = 0; i < boxMould.artists.length; i++) {
-			share = rev * boxMould.shares[i] / TOTAL_SHARES;
+			share = rev.mul(boxMould.shares[i]).div(TOTAL_SHARES);
 			boxMould.artists[i].transfer(share);
 		}
 	}
@@ -155,10 +173,10 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		BoxMould storage boxMould= boxMoulds[_id];
 		uint256 total;
 		for (uint256 i = 0; i < team.length; i++) {
-			total += teamShare[team[i]];
+			total = total.add(teamShare[team[i]]);
 		}
 		for (uint256 i = 0; i < boxMould.shares.length; i++) {
-			total += boxMould.shares[i];
+			total = total.add(boxMould.shares[i]);
 		}
 		return total == TOTAL_SHARES;
 	}
@@ -169,5 +187,4 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		else
 			return uint256(keccak256(abi.encodePacked(_seed)));
 	}
-
 }
