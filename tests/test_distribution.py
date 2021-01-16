@@ -20,6 +20,14 @@ def test_box(nftbox, minter, accounts):
     assert nftbox.boxes(2) == (1, 0)
     assert nftbox.boxes(3) == (1, 1)
 
+def test_box_out_of_range(nftbox, joy, minter, accounts):
+    joy.setCaller(nftbox, True, {'from':minter})
+    nftbox.setVendingMachine(joy, {'from': minter})
+    nftbox.createBoxMould(1, Wei('100 ether'), [1], [], [], "This is a test box", {'from':minter})
+    joy.createJOYtoy("c0ffee", "someType", "over 9000", "toy", "fun", 100, True, 0, 0, {'from':minter})
+    with brownie.reverts("NFTBoxes: Box does not exist."):
+        nftbox.buyBox(5, {'from':accounts[0]})
+
 def test_many_of_one(nftbox, minter, accounts):
     nftbox.createBoxMould(50, Wei('0.01 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
     nftbox.createBoxMould(20, Wei('0.1 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
@@ -33,6 +41,29 @@ def test_many_of_one(nftbox, minter, accounts):
         nftbox.buyBox(0, {'from':accounts[1], "value": Wei("0.01 ether")})
         assert nftbox.ownerOf(2 * i + supply + 1) == accounts[1]
         assert nftbox.boxes(2 * i + 1 + supply) == (0, i * 2 + 1)
+
+def test_many_at_once(nftbox, minter, accounts):
+    nftbox.createBoxMould(30, Wei('0.01 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
+    nftbox.createBoxMould(20, Wei('0.1 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
+    for j in range(5):
+        nftbox.buyBox(1, {'from':accounts[0], "value": Wei("0.1 ether")})
+    supply = nftbox.totalSupply()
+    for i in range(10):
+        nftbox.buyBox(0, {'from':accounts[0], "value": Wei("0.01 ether")})
+        assert nftbox.ownerOf(2 * i + supply) == accounts[0]
+        assert nftbox.boxes(2 * i + supply) == (0, i * 2)
+        nftbox.buyBox(0, {'from':accounts[1], "value": Wei("0.01 ether")})
+        assert nftbox.ownerOf(2 * i + supply + 1) == accounts[1]
+        assert nftbox.boxes(2 * i + 1 + supply) == (0, i * 2 + 1)
+    nftbox.buyManyBoxes(0, 5, {'from':accounts[0], "value": Wei("0.01 ether") * 5})
+    with brownie.reverts("NFTBoxes: wrong total price."):
+        nftbox.buyManyBoxes(0, 5, {'from':accounts[0], "value": Wei("0.01 ether")})
+    nftbox.buyManyBoxes(0, 5, {'from':accounts[0], "value": Wei("0.01 ether") * 5})
+    with brownie.reverts("NFTBoxes: Minting too many boxes."):
+        nftbox.buyManyBoxes(0, 5, {'from':accounts[0], "value": Wei("0.01 ether") * 5})
+    with brownie.reverts("NFTBoxes: Box is no longer buyable."):
+        nftbox.buyBox(0, {'from':accounts[0], "value": Wei("0.01 ether")})
+
 
 def test_not_buyable_edition_over(nftbox, minter, accounts):
     nftbox.createBoxMould(5, Wei('0.01 ether'), [1, 2, 3, 4], [], [], "This is a test box", {'from':minter})
@@ -60,7 +91,7 @@ def test_distribution_with_machine_one(nftbox, joy, me, minter, accounts):
     assert nftbox.balanceOf(accounts[0]) == 1
     assert joy.balanceOf(accounts[0]) == 4
 
-def test_distribution_with_machine(nftbox, joy, minter, accounts):
+def t1est_distribution_with_machine(nftbox, joy, minter, accounts):
     joy.setCaller(nftbox, True, {'from':minter})
     nftbox.setVendingMachine(joy, {'from': minter})
     nftbox.createBoxMould(20, Wei('0.01 ether'), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [], [], "This is a test box", {'from':minter})
@@ -74,7 +105,7 @@ def test_distribution_with_machine(nftbox, joy, minter, accounts):
     for i in range(10):
         assert joy.balanceOf(accounts[i]) == 20
 
-def test_distribution_with_machine2(nftbox, joy, minter, accounts):
+def t1est_distribution_with_machine2(nftbox, joy, minter, accounts):
     joy.setCaller(nftbox, True, {'from':minter})
     nftbox.setVendingMachine(joy, {'from': minter})
     nftbox.createBoxMould(20, Wei('0.01 ether'), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], [], [], "This is a test box", {'from':minter})
@@ -89,6 +120,32 @@ def test_distribution_with_machine2(nftbox, joy, minter, accounts):
         nftbox.distribute(0, 2,{'from':minter})
     for i in range(10):
         assert joy.balanceOf(accounts[i]) == 40
+
+def test_bad_shares(nftbox, joy, minter, accounts, me, me2, me3, big):
+    joy.setCaller(nftbox, True, {'from':minter})
+    nftbox.setVendingMachine(joy, {'from': minter})
+    nftbox.createBoxMould(1, Wei('100 ether'), [1], [], [], "This is a test box", {'from':minter})
+    joy.createJOYtoy("c0ffee", "someType", "over 9000", "toy", "fun", 100, True, 0, 0, {'from':minter})
+
+    nftbox.addTeamMember(me, {'from':minter})
+    nftbox.setTeamShare(me, 600, {'from':minter})
+
+    nftbox.addTeamMember(me2, {'from':minter})
+    nftbox.setTeamShare(me2, 400, {'from':minter})
+
+    nftbox.addTeamMember(me3, {'from':minter})
+    nftbox.setTeamShare(me3, 10, {'from':minter})
+
+    nftbox.buyBox(0, {'from':accounts[0], 'value':  Wei('100 ether')})
+    preme = me.balance()
+    preme2 = me2.balance()
+    preme3 = me3.balance()
+    with brownie.reverts("NFTBoxes: shares do not add up to 100%."):
+        nftbox.distributeShares(0,{'from':minter})
+    nftbox.removeTeamMember(me3, {'from':minter})
+    nftbox.distributeShares(0,{'from':minter})
+    assert me.balance() == preme + Wei('100 ether') * 600 / 1000
+    assert me2.balance() == preme2 + Wei('100 ether') * 400 / 1000
 
 def test_shares(nftbox, joy, minter, accounts, me, me2, me3, big):
     joy.setCaller(nftbox, True, {'from':minter})
@@ -105,7 +162,7 @@ def test_shares(nftbox, joy, minter, accounts, me, me2, me3, big):
     nftbox.addTeamMember(me3, {'from':minter})
     nftbox.setTeamShare(me3, 74, {'from':minter})
 
-    nftbox.buyBox(0, {'from':big, 'value':  Wei('100 ether')})
+    nftbox.buyBox(0, {'from':accounts[0], 'value':  Wei('100 ether')})
 
     preme = me.balance()
     preme2 = me2.balance()

@@ -8,8 +8,8 @@ def shared_setup(fn_isolation):
 
 @pytest.fixture()
 def minter(accounts):
-    # return accounts[0]
-    return accounts.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", force=True)
+    return accounts[0]
+    # return accounts.at("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", force=True)
 
 @pytest.fixture()
 def me(accounts):

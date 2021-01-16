@@ -48,8 +48,17 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		team.push(_member);
 	}
 
+	function removeTeamMember(address payable _member) external onlyOwner {
+		for (uint256 i = 0; i < team.length; i++)
+			if (team[i] == _member) {
+				delete teamShare[_member];
+				team[i] = team[team.length - 1];
+				team.pop();
+			}
+	}
+
 	function setTeamShare(address _member, uint _share) external onlyOwner {
-		require(_share < TOTAL_SHARES, "NFTBoxes: share must be below 1000");
+		require(_share <= TOTAL_SHARES, "NFTBoxes: share must be below 1000");
 		for (uint256 i = 0; i < team.length; i++)
 			if (team[i] == _member)
 				teamShare[_member] = _share;
