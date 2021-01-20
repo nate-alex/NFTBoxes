@@ -45,7 +45,7 @@ contract JOYtoys is ERC721, Ownable {
 
     string JOYtoyURI1;
     string JOYtoyURI2;
-    
+
     address public joyContractAddress;
     JOYContract joyWorld;
     
