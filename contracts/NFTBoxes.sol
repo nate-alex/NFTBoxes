@@ -153,16 +153,19 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		vendingMachine = IVendingMachine(_machine);
 	}
 
-	function distributeOffchain(uint256 _id, address[][] memory _recipients) external onlyOwner {
+	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external onlyOwner {
 		BoxMould memory boxMould= boxMoulds[_id];
 		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
-		require (_recipients[0].length == boxMould.ids.length, "NFTBoxes: Wrong array size.");
+		require (_recipients[0].length == boxMould.ids.length &&
+			_recipients[0].length == _ids.length, "NFTBoxes: Wrong array size.");
+		for (uint256 k = 0 ; k < _ids.length; k++)
+			require(boxMould.ids[k] == _ids[k], "NFTBoxes: Wrong art ID.");
 
 		// i is batch number
 		for (uint256 i = 0; i < _recipients.length; i++) {
 			// j is for the index of nft ID to send
 			for (uint256 j = 0;j <  _recipients[0].length; j++)
-				vendingMachine.JOYtoyMachineFor(boxMould.ids[j], _recipients[i][j]);
+				vendingMachine.JOYtoyMachineFor(_ids[j], _recipients[i][j]);
 		}
 	}
 
@@ -203,6 +206,10 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 
 	function getIdsLength(uint256 _id) external view returns (uint256) {
 		return boxMoulds[_id].ids.length;
+	}
+
+	function getIds(uint256 _id) external view returns (uint256[] memory) {
+		return boxMoulds[_id].ids;
 	}
 
 	function _transfer(address from, address to, uint256 tokenId) internal override {

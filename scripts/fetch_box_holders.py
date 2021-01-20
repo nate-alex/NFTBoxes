@@ -3,11 +3,11 @@ import csv
 
 def main():
     boxId = 1
-    seedStr = '0x6b81fc5c9ff7a165c1f5254bc7dff5280dbc1d7d6d2f16a3cb9de105b1b67569'
+    seedStr = '0x6b81fc5c9ff7a165c1f5254bc7dff5280dbc1d7d6d2f16a3cb9de105b1b67561'
     byteSeed = web3.toBytes(hexstr=seedStr)
     seed  = web3.soliditySha3(['bytes32'], [byteSeed])
     seedInt = web3.toInt(seed)
-    box = NFTBoxes.at('0xfa4Ff49c6ab0Ad4Fc2f5729F2807a28D497Db5c3')
+    box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
     print(f'Box contract at {box.address}\nFetching holders of box edition {boxId}...')
     ids = box.getIdsLength(boxId)
     box_contract = web3.eth.contract(address=box.address, abi=box.abi)

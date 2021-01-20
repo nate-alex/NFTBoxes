@@ -6,3 +6,4 @@ reports/
 @openzeppelin
 out
 .pytest*
+*.csv

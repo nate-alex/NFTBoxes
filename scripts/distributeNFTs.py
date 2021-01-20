@@ -6,8 +6,9 @@ def main():
 
     boxId = 1
     offset = 0
-    box = NFTBoxes.at('0xfa4Ff49c6ab0Ad4Fc2f5729F2807a28D497Db5c3')
+    box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
     dissArr = []
+    ids = box.getIds(boxId)
     with open(f'boxHolders_{boxId}.csv') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
@@ -24,4 +25,4 @@ def main():
         else:
             print(f'range[{i * batchSize}:{(i + 1) * batchSize}]')
             users = dissArr[i * batchSize : (i + 1) * batchSize]
-        box.distributeOffchain(boxId, users, {'from':user})
+        box.distributeOffchain(boxId, users, ids,{'from':user})
