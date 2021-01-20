@@ -12,9 +12,7 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		uint8				shared; // bool
 		uint128				maxEdition;
 		uint128				currentEditionCount;
-		uint128				checkpoint;
 		uint256				price;
-		uint256				seed;
 		uint256[]			ids;
 		address payable[]	artists;
 		uint256[]			shares;
@@ -34,8 +32,6 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 	mapping(uint256 => BoxMould) public	boxMoulds;
 	mapping(uint256 =>  Box) public	boxes;
 	mapping(uint256 => bool) public lockedBoxes;
-
-	mapping(uint256 =>mapping(uint256 => address[])) dissArr;
 
 	mapping(address => uint256) public teamShare;
 	address payable[] public team;
@@ -89,9 +85,7 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 			shared: uint8(0),
 			maxEdition: _max,
 			currentEditionCount: 0,
-			checkpoint: 0,
 			price: _price,
-			seed: 0,
 			ids: _ids,
 			artists: _artists,
 			shares: _shares,
@@ -131,7 +125,7 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 	function buyManyBoxes(uint256 _id, uint128 _quantity) external payable {
 		BoxMould storage boxMould = boxMoulds[_id];
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
-		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: wrong total price.");
+		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: Wrong total price.");
 		require(boxMould.currentEditionCount + _quantity <= boxMould.maxEdition, "NFTBoxes: Minting too many boxes.");
 
 		for (uint128 i = 0; i < _quantity; i++)
@@ -141,22 +135,8 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 			boxMould.live = uint8(1);
 	}
 
-	function buyBox(uint256 _id) external payable {
-		BoxMould storage boxMould = boxMoulds[_id];
-		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
-		require(boxMould.live == 0, "NFTBoxes: Box is no longer buyable.");
-		require(msg.value == boxMould.price, "NFTBoxes: Wrong price.");
-
-		_buy(boxMould, _id, 0);
-		boxMould.currentEditionCount++;
-		if (boxMould.currentEditionCount == boxMould.maxEdition)
-			boxMould.live = uint8(1);
-	}
-
 	function _buy(BoxMould storage boxMould, uint256 _id, uint256 _new) internal {
 		boxes[totalSupply()] = Box(_id, boxMould.currentEditionCount + _new);
-		for (uint256 i = 0; i < boxMould.ids.length; i++)
-			dissArr[_id][i].push(msg.sender);
 		//safe mint?
 		emit BoxBought(_id, boxMould.currentEditionCount + _new, totalSupply());
 		_mint(msg.sender, totalSupply());
@@ -173,36 +153,16 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		vendingMachine = IVendingMachine(_machine);
 	}
 
-	function distribute(uint256 _id, uint128 _amount) external  onlyOwner {
-		BoxMould storage boxMould= boxMoulds[_id];
-		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
-		require (boxMould.checkpoint + _amount <= boxMould.currentEditionCount, "NFTBoxes: minting too many NFTs.");
-
-		uint256 _seed = boxMould.seed == 0 ? _getNewSeed(0, msg.sender) : boxMould.seed;
-		uint128 _check = boxMould.checkpoint;
-		for (uint128 i = _check; i < _check + _amount; i++) {
-			for (uint256 j = 0; j < boxMould.ids.length; j++) {
-				_seed = _getNewSeed(_seed, address(0));
-				uint256 index = _seed % dissArr[_id][j].length;
-				address winner = dissArr[_id][j][index];
-				dissArr[_id][j][index] = dissArr[_id][j][dissArr[_id][j].length - 1];
-				dissArr[_id][j].pop();
-				vendingMachine.JOYtoyMachineFor(boxMould.ids[j], winner);
-			}
-		}
-		boxMould.checkpoint += uint128(_amount);
-		boxMould.seed = _seed;
-	}
-
 	function distributeOffchain(uint256 _id, address[][] memory _recipients) external onlyOwner {
 		BoxMould memory boxMould= boxMoulds[_id];
 		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
-		require (boxMould.checkpoint + _amount <= boxMould.currentEditionCount, "NFTBoxes: minting too many NFTs.");
-		require (_recipients.length == boxMould.ids.length, "NFTBoxes: Wrong array size.");
+		require (_recipients[0].length == boxMould.ids.length, "NFTBoxes: Wrong array size.");
 
-		for (uint256 i = 0; _recipients.length; i++) {
-			for (uint256 j = 0; _recipients[i].length; j++)
-				vendingMachine.JOYtoyMachineFor(boxMould.ids[i], _recipients[i][j]);
+		// i is batch number
+		for (uint256 i = 0; i < _recipients.length; i++) {
+			// j is for the index of nft ID to send
+			for (uint256 j = 0;j <  _recipients[0].length; j++)
+				vendingMachine.JOYtoyMachineFor(boxMould.ids[j], _recipients[i][j]);
 		}
 	}
 
@@ -237,11 +197,12 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		return total == TOTAL_SHARES;
 	}
 
-	function _getNewSeed(uint256 _seed, address _sender) internal view returns (uint256) {
-		if (_seed == 0)
-			return uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, _sender)));
-		else
-			return uint256(keccak256(abi.encodePacked(_seed)));
+	function _getNewSeed(bytes32 _seed) public pure returns (bytes32) {
+		return keccak256(abi.encodePacked(_seed));
+	}
+
+	function getIdsLength(uint256 _id) external view returns (uint256) {
+		return boxMoulds[_id].ids.length;
 	}
 
 	function _transfer(address from, address to, uint256 tokenId) internal override {

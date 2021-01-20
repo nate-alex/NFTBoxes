@@ -197,33 +197,17 @@ contract JOYtoys is ERC721, Ownable {
 
     function JOYtoyMachineFor(uint256 JOYtoyId, address _recipient) public authorised {
         require(toyMintingActive[JOYtoyId] == true, "Mint not active");
-        require(totalMinted[JOYtoyId] + 1 <= editionSizeMemory[JOYtoyId], "Cannot mint more");
+        uint256 editionId = totalMinted[JOYtoyId] + 1;
+        require(editionId <= editionSizeMemory[JOYtoyId], "Cannot mint more");
         require(vendingMachineMode[JOYtoyId] == true, "is not vending machine mode");
         // require(msg.value == priceMemory[JOYtoyId]);
         
         uint256 tokenId = totalSupply() + 1;
         artworkJOYtoyReference[tokenId] = JOYtoyId;
-        editionNumberMemory[tokenId] = totalMinted[JOYtoyId] + 1;
-        
-        // (address[5] memory royaltyAddress, uint256[5] memory percentage) = getRoyalties(JOYtoyId); 
-        
-        // for(uint256 i=0; i<royaltyLengthMemory[JOYtoyId]; i++){
-        //     address payable artistWallet = address(uint160(royaltyAddress[i]));
-        //     artistWallet.transfer(msg.value/100*percentage[i]);   
-        // }
-        
-        // if(joyHolderCollabActive[JOYtoyId] == true){
-        //     address payable joyHolder = address(uint160(joyHolderCollaborator[JOYtoyId]));
-        //     uint256 joyHolderPercentage = joyHolderCollabPercent[JOYtoyId];
-            
-        //     joyHolder.transfer(msg.value/100*joyHolderPercentage);
-        // }
-        
-        // joyWallet.transfer(address(this).balance);
-
+        editionNumberMemory[tokenId] = editionId;
         _safeMint(_recipient, tokenId);
 
-        totalMinted[JOYtoyId] = totalMinted[JOYtoyId] + 1;
+        totalMinted[JOYtoyId] = editionId;
         
         if (totalMinted[JOYtoyId] == editionSizeMemory[JOYtoyId]) {
             _closeJOYtoyWindow(JOYtoyId);
